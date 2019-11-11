@@ -10,13 +10,13 @@ pub enum GraphError {
     Unexpected,
 }
 
-pub struct Graph<T> {
+pub struct SmallGraph<T> {
     pub free: SmallVec<[NodeHandle; 128]>,
     pub nodes: SmallVec<[(Generation, Option<T>); 128]>,
     pub connections: SmallVec<[(NodeIndex, NodeIndex); 256]>,
 }
 
-impl<T> Graph<T> {
+impl<T> SmallGraph<T> {
     pub fn insert(&mut self, value: T) -> NodeHandle {
         if self.free.len() == 0 {
             let index = self.nodes.len();
