@@ -9,7 +9,7 @@ A graph implementation based on [`smallvec`](https://github.com/servo/rust-small
 # Example
 
 ```rust
-struct Foo{}
+struct Foo
 
 let g = SmallGraph::new();
 let f1 = g.insert(Foo{});
