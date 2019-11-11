@@ -12,7 +12,7 @@ A graph implementation based on [`smallvec`](https://github.com/servo/rust-small
 struct Foo
 
 fn main(){
-  let g = SmallGraph::new();
+  let g = smallgraph::SmallGraph::new();
   let f1 = g.insert(Foo{});
   let f2 = g.insert(Foo{});
   g.connect(f1,f2);
