@@ -10,6 +10,7 @@ pub enum GraphError {
     Unexpected,
 }
 
+#[derive(Default)]
 pub struct SmallGraph<T> {
     pub free: SmallVec<[NodeHandle; 128]>,
     pub nodes: SmallVec<[(Generation, Option<T>); 128]>,
