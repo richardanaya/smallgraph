@@ -4,13 +4,14 @@
 
 ```toml
 [dependencies]
-executor = "0.0"
+smallgraph = "0.0"
 ```
 
 A graph implementation based on [`smallvec`](https://github.com/servo/rust-smallvec) and generational indexes to increase memory cache locality of node members.
 
 * `#![no_std]`
 * [`smalltree`](https://github.com/richardanaya/smalltree) implementation is built on `smallgraph`
+* simple api that is easy to work with borrow checker
 
 
 # Example
@@ -20,9 +21,9 @@ struct Foo;
 
 fn main(){
   let g = smallgraph::SmallGraph::new();
-  let f1 = g.insert(Foo{});
-  let f2 = g.insert(Foo{});
-  g.connect(f1,f2);
+  let n1 = g.insert(Foo);
+  let n2 = g.insert(Foo);
+  g.connect(n1,n2);
 }
 ```
 
