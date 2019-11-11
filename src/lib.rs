@@ -1,4 +1,4 @@
-//#![no_std]
+#![no_std]
 use smallvec::SmallVec;
 
 pub type NodeIndex = usize;
@@ -12,6 +12,7 @@ pub struct SmallGraph<T> {
 }
 
 impl<T> SmallGraph<T> {
+    /// Create a new SmallGraph
     pub fn new() -> SmallGraph<T> {
         SmallGraph {
             free: SmallVec::new(),
@@ -20,6 +21,7 @@ impl<T> SmallGraph<T> {
         }
     }
 
+    /// Insert a value into graph
     pub fn insert(&mut self, value: T) -> NodeHandle {
         if self.free.len() == 0 {
             let index = self.nodes.len();
@@ -34,20 +36,38 @@ impl<T> SmallGraph<T> {
         }
     }
 
+    /// Create a directed connection between parent and child
     pub fn directed_connect(&mut self, parent: NodeHandle, child: NodeHandle) {
         self.connections.push((parent.0, child.0));
     }
 
+    /// Create a two way connection between two nodes
     pub fn connect(&mut self, a: NodeHandle, b: NodeHandle) {
         self.connections.push((a.0, b.0));
         self.connections.push((b.0, a.0));
     }
 
-    pub fn disconnect(&mut self, n: NodeHandle) {
+    /// Disconnect all connections to a node
+    pub fn disconnect_all(&mut self, n: NodeHandle) {
         self.connections
             .retain(|&mut connection| (connection).0 != n.0 && (connection).1 != n.0);
     }
 
+       /// Disconnect all connections between nodes
+    pub fn disconnect(&mut self, a: NodeHandle, b: NodeHandle) {
+        self.connections.retain(|&mut connection| {
+            !((connection.0 == a.0 && connection.1 == b.1)
+                && (connection.0 == b.0 && connection.1 == a.1))
+        });
+    }
+
+    /// Disconnect dirrected connection between source and destination
+    pub fn directed_disconnect(&mut self, source: NodeHandle, destination: NodeHandle) {
+        self.connections
+            .retain(|&mut connection| !(connection.0 == source.0 && connection.1 == destination.1));
+    }
+
+    /// Determine if two nodes are connected
     pub fn is_connected(&mut self, a: NodeHandle, b: NodeHandle) -> bool {
         self.connections
             .iter()
@@ -58,17 +78,19 @@ impl<T> SmallGraph<T> {
             .is_some()
     }
 
-    pub fn is_directed_connected(&mut self, parent: NodeHandle, child: NodeHandle) -> bool {
+    /// Determin if there is a direct connection between a source and destination node
+    pub fn is_directed_connected(&mut self, source: NodeHandle, destination: NodeHandle) -> bool {
         self.connections
             .iter()
-            .find(|&connection| connection.0 == parent.0 && connection.1 == child.0)
+            .find(|&connection| connection.0 == source.0 && connection.1 == destination.0)
             .is_some()
     }
 
+    /// Remove a node and it's connections from graph
     pub fn remove(&mut self, n: NodeHandle) -> Option<T> {
         let (index,gen) = n;
         if self.nodes[index].0 == gen {
-            self.disconnect(n);
+            self.disconnect_all(n);
             let mut r = (gen + 1, None);
             core::mem::swap(&mut self.nodes[index], &mut r);
             self.free.push(n);
@@ -77,6 +99,7 @@ impl<T> SmallGraph<T> {
         None
     }
 
+    /// Get the value of a node
     pub fn get(&self, n: NodeHandle) -> Option<&T> {
         let (index,gen) = n;
         if self.nodes[index].0 == gen {
@@ -87,6 +110,7 @@ impl<T> SmallGraph<T> {
         None
     }
 
+    /// Get a mutable value of a node
     pub fn get_mut(&mut self, n: NodeHandle) -> Option<&mut T> {
         let (index,gen) = n;
         if self.nodes[index].0 == gen {
@@ -160,10 +184,14 @@ mod tests {
         let f3 = g.insert(Foo {v:33});
         g.directed_connect(f1,f2);
         g.directed_connect(f2,f3);
-        assert_eq!(2, g.connections.len());
+        g.directed_connect(f1,f3);
+        assert_eq!(3, g.connections.len());
         assert_eq!((0,1), g.connections[0]);
         assert_eq!((1,2), g.connections[1]);
         g.remove(f2);
-        assert_eq!(0, g.connections.len());
+        assert_eq!(1, g.connections.len());
+        assert_eq!(true, g.is_connected(f1,f3));
+        assert_eq!(false, g.is_connected(f1,f2));
+        assert_eq!(false, g.is_connected(f2,f3));
     }
 }
