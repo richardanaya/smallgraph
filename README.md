@@ -20,8 +20,8 @@ struct Foo;
 
 fn main(){
   let g = smallgraph::SmallGraph::new();
-  let f1 = g.insert(Foo{});
-  let f2 = g.insert(Foo{});
+  let f1 = g.insert(Foo);
+  let f2 = g.insert(Foo);
   g.connect(f1,f2);
 }
 ```
