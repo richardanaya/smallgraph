@@ -6,9 +6,9 @@ pub type Generation = usize;
 pub type NodeHandle = (NodeIndex, Generation);
 
 pub struct SmallGraph<T> {
-    pub free: SmallVec<[NodeHandle; 128]>,
-    pub nodes: SmallVec<[(Generation, Option<T>); 128]>,
-    pub connections: SmallVec<[(NodeIndex, NodeIndex); 256]>,
+    pub(crate) free: SmallVec<[NodeHandle; 128]>,
+    pub(crate) nodes: SmallVec<[(Generation, Option<T>); 128]>,
+    pub(crate) connections: SmallVec<[(NodeIndex, NodeIndex); 256]>,
 }
 
 impl<T> SmallGraph<T> {
@@ -30,15 +30,45 @@ impl<T> SmallGraph<T> {
             (index, gen)
         } else {
             let n = self.free.remove(0);
-            let (index,gen) = n;
+            let (index, gen) = n;
             self.nodes[index] = (gen + 1, Some(value));
             (n.0, gen + 1)
         }
     }
 
     /// Create a directed connection between parent and child
-    pub fn directed_connect(&mut self, parent: NodeHandle, child: NodeHandle) {
+    pub fn connect_to(&mut self, parent: NodeHandle, child: NodeHandle) {
         self.connections.push((parent.0, child.0));
+    }
+
+    /// Get nodes this node has an edge to
+    pub fn neighbors(&self, node: NodeHandle) -> SmallVec<[NodeHandle; 8]> {
+        let mut children = SmallVec::new();
+        for i in 0..self.connections.len() {
+            if self.connections[i].0 == node.0 {
+                let child_handle = (
+                    self.connections[i].1,
+                    self.nodes[self.connections[i].1].0,
+                );
+                children.push(child_handle);
+            }
+        }
+        children
+    }
+
+    /// Get nodes that have an edge that can reach node
+    pub fn nodes_with_neighbor(&self, node: NodeHandle) -> SmallVec<[NodeHandle; 8]> {
+        let mut children = SmallVec::new();
+        for i in 0..self.connections.len() {
+            if self.connections[i].1 == node.0 {
+                let child_handle = (
+                    self.connections[i].1,
+                    self.nodes[self.connections[i].1].0,
+                );
+                children.push(child_handle);
+            }
+        }
+        children
     }
 
     /// Create a two way connection between two nodes
@@ -47,13 +77,13 @@ impl<T> SmallGraph<T> {
         self.connections.push((b.0, a.0));
     }
 
-    /// Disconnect all connections to a node
+    /// Disconnect all connections a node has
     pub fn disconnect_all(&mut self, n: NodeHandle) {
         self.connections
             .retain(|&mut connection| (connection).0 != n.0 && (connection).1 != n.0);
     }
 
-       /// Disconnect all connections between nodes
+    /// Disconnect all connections between two nodes
     pub fn disconnect(&mut self, a: NodeHandle, b: NodeHandle) {
         self.connections.retain(|&mut connection| {
             !((connection.0 == a.0 && connection.1 == b.1)
@@ -61,25 +91,14 @@ impl<T> SmallGraph<T> {
         });
     }
 
-    /// Disconnect dirrected connection between source and destination
-    pub fn directed_disconnect(&mut self, source: NodeHandle, destination: NodeHandle) {
+    /// Disconnect edge connection between source and destination
+    pub fn disconnect_from(&mut self, source: NodeHandle, destination: NodeHandle) {
         self.connections
             .retain(|&mut connection| !(connection.0 == source.0 && connection.1 == destination.1));
     }
 
-    /// Determine if two nodes are connected
-    pub fn is_connected(&mut self, a: NodeHandle, b: NodeHandle) -> bool {
-        self.connections
-            .iter()
-            .find(|&connection| {
-                (connection.0 == a.0 && connection.1 == b.0)
-                    || (connection.1 == a.0 && connection.0 == b.0)
-            })
-            .is_some()
-    }
-
-    /// Determin if there is a direct connection between a source and destination node
-    pub fn is_directed_connected(&mut self, source: NodeHandle, destination: NodeHandle) -> bool {
+    /// Determine if there is a connection connection between a source and destination node
+    pub fn is_connected_to(&mut self, source: NodeHandle, destination: NodeHandle) -> bool {
         self.connections
             .iter()
             .find(|&connection| connection.0 == source.0 && connection.1 == destination.0)
@@ -88,7 +107,7 @@ impl<T> SmallGraph<T> {
 
     /// Remove a node and it's connections from graph
     pub fn remove(&mut self, n: NodeHandle) -> Option<T> {
-        let (index,gen) = n;
+        let (index, gen) = n;
         if self.nodes[index].0 == gen {
             self.disconnect_all(n);
             let mut r = (gen + 1, None);
@@ -99,9 +118,20 @@ impl<T> SmallGraph<T> {
         None
     }
 
+    /// Returns the count of nodes
+    pub fn node_count(&self) -> usize {
+        let mut c = 0;
+        for i in 0..self.nodes.len() {
+            if self.nodes[i].1.is_some() {
+                c += 1;
+            }
+        }
+        c
+    }
+
     /// Get the value of a node
     pub fn get(&self, n: NodeHandle) -> Option<&T> {
-        let (index,gen) = n;
+        let (index, gen) = n;
         if self.nodes[index].0 == gen {
             if let Some(value) = &self.nodes[index].1 {
                 return Some(value);
@@ -112,7 +142,7 @@ impl<T> SmallGraph<T> {
 
     /// Get a mutable value of a node
     pub fn get_mut(&mut self, n: NodeHandle) -> Option<&mut T> {
-        let (index,gen) = n;
+        let (index, gen) = n;
         if self.nodes[index].0 == gen {
             if let Some(value) = &mut self.nodes[index].1 {
                 return Some(value);
@@ -127,9 +157,9 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
-    #[derive(Debug,PartialEq)]
-    struct Foo{
-        v:u8
+    #[derive(Debug, PartialEq)]
+    struct Foo {
+        v: u8,
     }
 
     #[test]
@@ -143,8 +173,8 @@ mod tests {
     #[test]
     fn test_basic_1() {
         let mut g = SmallGraph::<Foo>::new();
-        let f1 = g.insert(Foo {v:24});
-        let f2 = g.insert(Foo {v:42});
+        let f1 = g.insert(Foo { v: 24 });
+        let f2 = g.insert(Foo { v: 42 });
         assert_eq!(2, g.nodes.len());
         assert_eq!(0, f1.0);
         assert_eq!(0, f1.1);
@@ -155,10 +185,10 @@ mod tests {
     #[test]
     fn test_basic_2() {
         let mut g = SmallGraph::<Foo>::new();
-        let f1 = g.insert(Foo {v:42});
+        let f1 = g.insert(Foo { v: 42 });
         let r = g.remove(f1).expect("could not remove");
         assert_eq!(42, r.v);
-        let f2 = g.insert(Foo {v:55});
+        let f2 = g.insert(Foo { v: 55 });
         assert_eq!(0, f2.0);
         assert_eq!(1, f2.1);
         assert_eq!(None, g.get(f1));
@@ -168,30 +198,41 @@ mod tests {
     #[test]
     fn test_basic_3() {
         let mut g = SmallGraph::<Foo>::new();
-        let f1 = g.insert(Foo {v:24});
-        let f2 = g.insert(Foo {v:42});
-        g.connect(f1,f2);
+        let f1 = g.insert(Foo { v: 24 });
+        let f2 = g.insert(Foo { v: 42 });
+        g.connect(f1, f2);
         assert_eq!(2, g.connections.len());
-        assert_eq!((0,1), g.connections[0]);
-        assert_eq!((1,0), g.connections[1]);
+        assert_eq!((0, 1), g.connections[0]);
+        assert_eq!((1, 0), g.connections[1]);
     }
 
     #[test]
     fn test_basic_4() {
         let mut g = SmallGraph::<Foo>::new();
-        let f1 = g.insert(Foo {v:24});
-        let f2 = g.insert(Foo {v:42});
-        let f3 = g.insert(Foo {v:33});
-        g.directed_connect(f1,f2);
-        g.directed_connect(f2,f3);
-        g.directed_connect(f1,f3);
+        let f1 = g.insert(Foo { v: 24 });
+        let f2 = g.insert(Foo { v: 42 });
+        let f3 = g.insert(Foo { v: 33 });
+        g.connect_to(f1, f2);
+        g.connect_to(f2, f3);
+        g.connect_to(f1, f3);
         assert_eq!(3, g.connections.len());
-        assert_eq!((0,1), g.connections[0]);
-        assert_eq!((1,2), g.connections[1]);
+        assert_eq!((0, 1), g.connections[0]);
+        assert_eq!((1, 2), g.connections[1]);
         g.remove(f2);
         assert_eq!(1, g.connections.len());
-        assert_eq!(true, g.is_connected(f1,f3));
-        assert_eq!(false, g.is_connected(f1,f2));
-        assert_eq!(false, g.is_connected(f2,f3));
+        assert_eq!(true, g.is_connected_to(f1, f3));
+        assert_eq!(false, g.is_connected_to(f1, f2));
+        assert_eq!(false, g.is_connected_to(f2, f3));
+    }
+
+    #[test]
+    fn test_basic_5() {
+        let mut g = SmallGraph::<Foo>::new();
+        g.insert(Foo { v: 24 });
+        g.insert(Foo { v: 42 });
+        let f3 = g.insert(Foo { v: 33 });
+        assert_eq!(3, g.node_count());
+        g.remove(f3);
+        assert_eq!(2, g.node_count());
     }
 }
