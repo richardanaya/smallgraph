@@ -4,7 +4,7 @@
 
 ```toml
 [dependencies]
-executor = "0.0"
+smallgraph = "0.0"
 ```
 
 A graph implementation based on [`smallvec`](https://github.com/servo/rust-smallvec) and generational indexes to increase memory cache locality of node members.
