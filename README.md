@@ -9,10 +9,10 @@ smallgraph = "0.0"
 
 A graph implementation based on [`smallvec`](https://github.com/servo/rust-smallvec) and generational indexes to increase memory cache locality of node members.
 
-* `#![no_std]`
-* [`smalltree`](https://github.com/richardanaya/smalltree) implementation is built on `smallgraph`
-* simple api that is easy to work with borrow checker
-
+- [x] `#![no_std]`
+- [x] [`smalltree`](https://github.com/richardanaya/smalltree) implementation is built on `smallgraph`
+- [x] simple api that is easy to work with borrow checker
+- [ ] use generics to pass in a numeric type to be able to tune sizing
 
 # Example
 
