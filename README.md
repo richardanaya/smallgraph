@@ -1,5 +1,12 @@
 # smallgraph
 
+<a href="https://docs.rs/smallgraph"><img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square" alt="docs.rs docs" /></a>
+
+```toml
+[dependencies]
+executor = "0.0"
+```
+
 A graph implementation based on [`smallvec`](https://github.com/servo/rust-smallvec) and generational indexes to increase memory cache locality of node members.
 
 * `#![no_std]`
