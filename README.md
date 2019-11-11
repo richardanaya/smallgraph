@@ -16,7 +16,7 @@ A graph implementation based on [`smallvec`](https://github.com/servo/rust-small
 # Example
 
 ```rust
-struct Foo
+struct Foo;
 
 fn main(){
   let g = smallgraph::SmallGraph::new();

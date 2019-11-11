@@ -1,16 +1,10 @@
-#![no_std]
+//#![no_std]
 use smallvec::SmallVec;
 
 pub type NodeIndex = usize;
 pub type Generation = usize;
 pub type NodeHandle = (NodeIndex, Generation);
 
-pub enum GraphError {
-    GenerationMismatch,
-    Unexpected,
-}
-
-#[derive(Default)]
 pub struct SmallGraph<T> {
     pub free: SmallVec<[NodeHandle; 128]>,
     pub nodes: SmallVec<[(Generation, Option<T>); 128]>,
@@ -34,8 +28,7 @@ impl<T> SmallGraph<T> {
             (index, gen)
         } else {
             let n = self.free.remove(0);
-            let index = n.0;
-            let gen = n.1;
+            let (index,gen) = n;
             self.nodes[index] = (gen + 1, Some(value));
             (n.0, gen + 1)
         }
@@ -72,45 +65,105 @@ impl<T> SmallGraph<T> {
             .is_some()
     }
 
-    pub fn remove(&mut self, n: NodeHandle) -> Result<T, GraphError> {
-        let index = n.0;
-        let gen = n.1;
+    pub fn remove(&mut self, n: NodeHandle) -> Option<T> {
+        let (index,gen) = n;
         if self.nodes[index].0 == gen {
             self.disconnect(n);
             let mut r = (gen + 1, None);
             core::mem::swap(&mut self.nodes[index], &mut r);
             self.free.push(n);
-            Ok(r.1.unwrap())
-        } else {
-            Err(GraphError::GenerationMismatch)
+            return Some(r.1.unwrap());
         }
+        None
     }
 
-    pub fn get(&self, n: NodeHandle) -> Result<&T, GraphError> {
-        let index = n.0;
-        let gen = n.1;
+    pub fn get(&self, n: NodeHandle) -> Option<&T> {
+        let (index,gen) = n;
         if self.nodes[index].0 == gen {
             if let Some(value) = &self.nodes[index].1 {
-                Ok(value)
-            } else {
-                Err(GraphError::Unexpected)
+                return Some(value);
             }
-        } else {
-            Err(GraphError::GenerationMismatch)
         }
+        None
     }
 
-    pub fn get_mut(&mut self, n: NodeHandle) -> Result<&mut T, GraphError> {
-        let index = n.0;
-        let gen = n.1;
+    pub fn get_mut(&mut self, n: NodeHandle) -> Option<&mut T> {
+        let (index,gen) = n;
         if self.nodes[index].0 == gen {
             if let Some(value) = &mut self.nodes[index].1 {
-                Ok(value)
-            } else {
-                Err(GraphError::Unexpected)
+                return Some(value);
             }
-        } else {
-            Err(GraphError::GenerationMismatch)
         }
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[derive(Debug,PartialEq)]
+    struct Foo{
+        v:u8
+    }
+
+    #[test]
+    fn test_basic_0() {
+        let g = SmallGraph::<Foo>::new();
+        assert_eq!(0, g.nodes.len());
+        assert_eq!(0, g.free.len());
+        assert_eq!(0, g.connections.len());
+    }
+
+    #[test]
+    fn test_basic_1() {
+        let mut g = SmallGraph::<Foo>::new();
+        let f1 = g.insert(Foo {v:24});
+        let f2 = g.insert(Foo {v:42});
+        assert_eq!(2, g.nodes.len());
+        assert_eq!(0, f1.0);
+        assert_eq!(0, f1.1);
+        assert_eq!(1, f2.0);
+        assert_eq!(0, f2.1);
+    }
+
+    #[test]
+    fn test_basic_2() {
+        let mut g = SmallGraph::<Foo>::new();
+        let f1 = g.insert(Foo {v:42});
+        let r = g.remove(f1).expect("could not remove");
+        assert_eq!(42, r.v);
+        let f2 = g.insert(Foo {v:55});
+        assert_eq!(0, f2.0);
+        assert_eq!(1, f2.1);
+        assert_eq!(None, g.get(f1));
+        assert_eq!(55, g.get(f2).unwrap().v);
+    }
+
+    #[test]
+    fn test_basic_3() {
+        let mut g = SmallGraph::<Foo>::new();
+        let f1 = g.insert(Foo {v:24});
+        let f2 = g.insert(Foo {v:42});
+        g.connect(f1,f2);
+        assert_eq!(2, g.connections.len());
+        assert_eq!((0,1), g.connections[0]);
+        assert_eq!((1,0), g.connections[1]);
+    }
+
+    #[test]
+    fn test_basic_4() {
+        let mut g = SmallGraph::<Foo>::new();
+        let f1 = g.insert(Foo {v:24});
+        let f2 = g.insert(Foo {v:42});
+        let f3 = g.insert(Foo {v:33});
+        g.directed_connect(f1,f2);
+        g.directed_connect(f2,f3);
+        assert_eq!(2, g.connections.len());
+        assert_eq!((0,1), g.connections[0]);
+        assert_eq!((1,2), g.connections[1]);
+        g.remove(f2);
+        assert_eq!(0, g.connections.len());
     }
 }
