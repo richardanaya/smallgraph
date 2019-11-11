@@ -11,8 +11,10 @@ A graph implementation based on [`smallvec`](https://github.com/servo/rust-small
 ```rust
 struct Foo
 
-let g = SmallGraph::new();
-let f1 = g.insert(Foo{});
-let f2 = g.insert(Foo{});
-g.connect(f1,f2);
+fn main(){
+  let g = SmallGraph::new();
+  let f1 = g.insert(Foo{});
+  let f2 = g.insert(Foo{});
+  g.connect(f1,f2);
+}
 ```
