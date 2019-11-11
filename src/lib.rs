@@ -1,9 +1,9 @@
 #![no_std]
 use smallvec::SmallVec;
 
-type NodeIndex = usize;
-type Generation = usize;
-type NodeHandle = (NodeIndex, Generation);
+pub type NodeIndex = usize;
+pub type Generation = usize;
+pub type NodeHandle = (NodeIndex, Generation);
 
 pub enum GraphError {
     GenerationMismatch,
