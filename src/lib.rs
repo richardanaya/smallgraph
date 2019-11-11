@@ -18,6 +18,14 @@ pub struct SmallGraph<T> {
 }
 
 impl<T> SmallGraph<T> {
+    pub fn new() -> SmallGraph<T> {
+        SmallGraph {
+            free: SmallVec::new(),
+            nodes: SmallVec::new(),
+            connections: SmallVec::new(),
+        }
+    }
+
     pub fn insert(&mut self, value: T) -> NodeHandle {
         if self.free.len() == 0 {
             let index = self.nodes.len();
