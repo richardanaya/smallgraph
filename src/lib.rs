@@ -46,10 +46,7 @@ impl<T> SmallGraph<T> {
         let mut children = SmallVec::new();
         for i in 0..self.connections.len() {
             if self.connections[i].0 == node.0 {
-                let child_handle = (
-                    self.connections[i].1,
-                    self.nodes[self.connections[i].1].0,
-                );
+                let child_handle = (self.connections[i].1, self.nodes[self.connections[i].1].0);
                 children.push(child_handle);
             }
         }
@@ -61,10 +58,7 @@ impl<T> SmallGraph<T> {
         let mut children = SmallVec::new();
         for i in 0..self.connections.len() {
             if self.connections[i].1 == node.0 {
-                let child_handle = (
-                    self.connections[i].1,
-                    self.nodes[self.connections[i].1].0,
-                );
+                let child_handle = (self.connections[i].1, self.nodes[self.connections[i].1].0);
                 children.push(child_handle);
             }
         }

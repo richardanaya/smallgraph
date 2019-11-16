@@ -1,6 +1,6 @@
 build:
-	@cargo build --target wasm32-unknown-unknown
+	@cargo build
 lint:
 	@cargo fmt
-serve:
-	@python3 -m http.server 8080
+test:
+	@cargo test
